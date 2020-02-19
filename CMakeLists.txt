@@ -6,12 +6,19 @@ set(TORCHVISION_VERSION 0.5.0)
 option(WITH_CUDA "Enable CUDA support" OFF)
 
 if(WITH_CUDA)
-  enable_language(CUDA)
+  # NOTE: 
+  #   'find_package' instead of 'enable_language' better handles detection of the specified CUDA version
+  #   using provided CUDA_ROOT (if any), and also automatically finds and forwards usefull compile
+  #   parameters such as the supported compute architecture specifically for the detected GPU.
+  # enable_language(CUDA)
+  find_package(CUDA)
   add_definitions(-D__CUDA_NO_HALF_OPERATORS__)
 endif()
 
 find_package(Python3 COMPONENTS Development)
 find_package(Torch REQUIRED)
+# NOTE: find pybind11 that is still used by Torch although not referenced in its requirements
+find_package(pybind11 REQUIRED)
 
 file(GLOB HEADERS torchvision/csrc/*.h)
 file(GLOB OPERATOR_SOURCES torchvision/csrc/cpu/*.h torchvision/csrc/cpu/*.cpp torchvision/csrc/*.cpp)
@@ -22,6 +29,8 @@ file(GLOB MODELS_HEADERS torchvision/csrc/models/*.h)
 file(GLOB MODELS_SOURCES torchvision/csrc/models/*.h torchvision/csrc/models/*.cpp)
 
 add_library(${PROJECT_NAME} SHARED ${MODELS_SOURCES} ${OPERATOR_SOURCES})
+# NOTE: add the missing pybind11 reference
+target_include_directories(${PROJECT_NAME} PRIVATE ${pybind11_INCLUDE_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${TORCH_LIBRARIES} Python3::Python)
 set_target_properties(${PROJECT_NAME} PROPERTIES EXPORT_NAME TorchVision)
 
